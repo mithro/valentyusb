@@ -129,14 +129,17 @@ class UsbTransfer(Module):
 
         transfer.act("RECV_TOKEN",
             If(rxstate.o_decoded,
-                #If((rxstate.o_pid & PIDTypes.TYPE_MASK) != PIDTypes.TOKEN,
+                If(rxstate.o_pid == PID.SOF,
+                    NextState('WAIT_TOKEN'),
+                #).Elf((rxstate.o_pid & PIDTypes.TYPE_MASK) != PIDTypes.TOKEN,
                 #    NextState('ERROR'),
-                #),
-                NextValue(self.tok,  rxstate.o_pid),
-                NextValue(self.addr, rxstate.o_addr),
-                NextValue(self.endp, rxstate.o_endp),
-                self.start.eq(1),
-                NextState("POLL_RESPONSE"),
+                ).Else(
+                    NextValue(self.tok,  rxstate.o_pid),
+                    NextValue(self.addr, rxstate.o_addr),
+                    NextValue(self.endp, rxstate.o_endp),
+                    self.start.eq(1),
+                    NextState("POLL_RESPONSE"),
+                ),
             ),
         )
 
@@ -154,11 +157,8 @@ class UsbTransfer(Module):
                     NextValue(response_pid, PID.NAK),
                 ),
 
-                If(rxstate.o_pid == PID.SOF,
-                    NextState('WAIT_TOKEN'),
-
                 # Setup transfer
-                ).Elif(self.tok == PID.SETUP,
+                If(self.tok == PID.SETUP,
                     NextState("WAIT_DATA"),
 
                 # Out transfer
